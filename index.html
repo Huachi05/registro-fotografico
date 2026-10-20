@@ -12,11 +12,11 @@
 <body>
 <main class="app">
   <section id="setupView" class="card login hidden">
-    <p class="eyebrow">CONFIGURACIÓN INICIAL</p><h1>Conectar con Supabase</h1>
-    <p class="muted">Esta configuración queda guardada solamente en este navegador. Use la URL y la clave pública anon, nunca la service role.</p>
-    <div class="field"><label>Supabase URL</label><input id="setupUrl" placeholder="https://proyecto.supabase.co"></div>
-    <div class="field"><label>Anon key</label><textarea id="setupKey" placeholder="Clave pública anon"></textarea></div>
-    <button id="saveSetup" class="btn primary">Guardar configuración</button>
+    <p class="eyebrow">CONFIGURACIÓN INICIAL</p><h1>Configuración pendiente</h1>
+    <p class="muted">El administrador debe incorporar la conexión pública de Supabase en index.html antes de publicarlo.</p>
+    
+    
+    <p class="message error">Falta configurar el archivo index.html.</p>
   </section>
 
   <section id="loginView" class="card login hidden">
@@ -27,7 +27,7 @@
       <p id="loginError" class="message error hidden"></p>
       <button id="loginButton" class="btn primary">Ingresar</button>
     </form>
-    <button id="changeSetupLogin" class="link" style="margin-top:12px">Cambiar configuración</button>
+    
   </section>
 
   <div id="mainView" class="hidden">
@@ -57,19 +57,22 @@
     <details class="card settings"><summary>Configuración</summary>
       <p class="muted">La copia local se conserva 72 horas. Las fotografías en Supabase Storage se eliminan después de 60 días; los datos del registro se mantienen.</p>
       <button id="persistent" class="btn secondary">Solicitar almacenamiento persistente</button>
-      <button id="changeSetup" class="btn danger" style="margin-top:10px">Cambiar proyecto Supabase</button>
+      
     </details>
   </div>
 </main>
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
 
-const $=id=>document.getElementById(id);const CONFIG='rfo-supabase-config-v1';let supabase=null,user=null,previewUrl='',syncRunning=false,saveLock=false;
+const $=id=>document.getElementById(id);
+const SUPABASE_URL=https://akgdwzotziybpfxxxsjc.supabase.co;
+const SUPABASE_PUBLIC_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrZ2R3em90eml5YnBmeHh4c2pjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0ODk3MzAsImV4cCI6MjEwODA2NTczMH0.rXZXVdJ2oiV5Rbbjxb3NwNZgusU1ghmLh8ACkZoJtww;
+let supabase=null,user=null,previewUrl='',syncRunning=false,saveLock=false;
 const DB_NAME='rfo-offline-html-v1',STORE='records';
 function openDb(){return new Promise((ok,no)=>{const req=indexedDB.open(DB_NAME,1);req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(STORE)){const s=db.createObjectStore(STORE,{keyPath:'uuid'});s.createIndex('state','state');s.createIndex('createdAt','createdAt')}};req.onsuccess=()=>ok(req.result);req.onerror=()=>no(req.error)})}
 async function tx(mode,fn){const db=await openDb();return new Promise((ok,no)=>{const t=db.transaction(STORE,mode),s=t.objectStore(STORE);let out;try{out=fn(s)}catch(e){no(e);return}t.oncomplete=()=>ok(out);t.onerror=()=>no(t.error);t.onabort=()=>no(t.error)})}
 async function put(r){await tx('readwrite',s=>s.put(r))}async function get(id){const db=await openDb();return new Promise((ok,no)=>{const q=db.transaction(STORE).objectStore(STORE).get(id);q.onsuccess=()=>ok(q.result);q.onerror=()=>no(q.error)})}async function all(){const db=await openDb();return new Promise((ok,no)=>{const q=db.transaction(STORE).objectStore(STORE).getAll();q.onsuccess=()=>ok(q.result.sort((a,b)=>b.createdAt-a.createdAt));q.onerror=()=>no(q.error)})}
-function config(){try{return JSON.parse(localStorage.getItem(CONFIG)||'null')}catch{return null}}function setConfig(v){localStorage.setItem(CONFIG,JSON.stringify(v))}
+function config(){if(SUPABASE_URL.startsWith('REEMPLAZAR_')||SUPABASE_PUBLIC_KEY.startsWith('REEMPLAZAR_'))return null;return{url:SUPABASE_URL,key:SUPABASE_PUBLIC_KEY}}function setConfig(){}
 function show(id){['setupView','loginView','mainView'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}
 function client(){const c=config();if(!c)return null;supabase=createClient(c.url,c.key,{auth:{persistSession:true,autoRefreshToken:true}});return supabase}
 function shortId(date,uuid){return `RF-${date.toISOString().slice(0,10).replaceAll('-','')}-${uuid.replaceAll('-','').slice(0,6).toUpperCase()}`}
@@ -89,8 +92,6 @@ const escapeHtml=s=>s.replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 function todayLocal(){const d=new Date(),offset=d.getTimezoneOffset()*60000;return new Date(d-offset).toISOString().slice(0,10)}function setDefaultDate(){if(!$('recordDate').value)$('recordDate').value=todayLocal()}
 async function boot(){const c=config();if(!c){show('setupView');return}client();const{data}=await supabase.auth.getSession();if(!data.session){show('loginView');return}user=data.session.user;show('mainView');setDefaultDate();await refresh();await sync()}
 function message(text,error=false){$('saveMessage').textContent=text;$('saveMessage').className='message'+(error?' error':'');$('saveMessage').classList.remove('hidden')}
-$('saveSetup').onclick=()=>{const url=$('setupUrl').value.trim().replace(/\/$/,''),key=$('setupKey').value.trim();if(!url||!key)return alert('Complete URL y anon key.');setConfig({url,key});location.reload()};
-$('changeSetupLogin').onclick=()=>$('setupView').classList.remove('hidden');
 $('loginForm').onsubmit=async e=>{e.preventDefault();$('loginButton').disabled=true;const{error}=await supabase.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});$('loginButton').disabled=false;if(error){$('loginError').textContent='No fue posible iniciar sesión.';$('loginError').classList.remove('hidden');return}location.reload()};
 $('logout').onclick=async()=>{await supabase.auth.signOut();location.reload()};
 $('photo').onchange=e=>{const f=e.target.files?.[0];if(previewUrl)URL.revokeObjectURL(previewUrl);previewUrl=f?URL.createObjectURL(f):'';$('preview').src=previewUrl;$('preview').classList.toggle('hidden',!f);$('removePhoto').classList.toggle('hidden',!f);$('save').disabled=!f};
@@ -98,7 +99,6 @@ $('removePhoto').onclick=()=>{$('photo').value='';$('preview').classList.add('hi
 $('captureForm').onsubmit=async e=>{e.preventDefault();if(saveLock)return;const file=$('photo').files?.[0];if(!file)return;saveLock=true;$('save').disabled=true;$('working').classList.remove('hidden');$('saveMessage').classList.add('hidden');try{const id=crypto.randomUUID(),now=new Date(),img=await prepare(file);const m3=Number($('m3').value.replace(',','.'));if(!Number.isFinite(m3)||m3<=0)throw new Error('Ingrese un valor de m3 mayor que cero.');const r={uuid:id,visibleId:shortId(now,id),userId:user.id,m3,recordDate:$('recordDate').value,observation:$('observation').value.trim(),captureTimestamp:now.toISOString(),clientCreatedAt:now.toISOString(),deviceId:deviceId(),photo:img.photo,thumb:img.thumb,checksum:img.checksum,fileSize:img.photo.size,thumbnailSize:img.thumb.size,state:'PENDING_UPLOAD',attempts:0,nextAttemptAt:0,leaseUntil:0,createdAt:Date.now()};await put(r);$('photo').value='';$('preview').classList.add('hidden');$('removePhoto').classList.add('hidden');$('observation').value='';$('m3').value='';message('Guardado en el dispositivo. Puede tomar la siguiente fotografía.');await refresh();void sync()}catch(e){message('No se pudo guardar localmente. La fotografía sigue en pantalla. '+e.message,true)}finally{saveLock=false;$('working').classList.add('hidden');$('save').disabled=!$('photo').files?.length}};
 $('retryAll').onclick=async()=>{for(const r of await all())if(['RETRY_WAIT','BLOCKED_AUTH'].includes(r.state)){r.state='PENDING_UPLOAD';r.nextAttemptAt=0;await put(r)}await sync()};
 $('persistent').onclick=async()=>alert(await navigator.storage?.persist?.()?'Almacenamiento persistente concedido.':'El navegador no lo concedió; la cola seguirá funcionando, pero no borre los datos del sitio.');
-$('changeSetup').onclick=()=>{if(confirm('¿Cambiar el proyecto Supabase? Los registros locales pendientes no se borrarán.')){localStorage.removeItem(CONFIG);location.reload()}};
 addEventListener('online',sync);addEventListener('offline',refresh);addEventListener('visibilitychange',()=>document.visibilityState==='visible'&&sync());setInterval(sync,15000);boot();
 </script>
 </body>
