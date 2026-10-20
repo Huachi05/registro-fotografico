@@ -65,8 +65,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
 
 const $=id=>document.getElementById(id);
-const SUPABASE_URL=https://akgdwzotziybpfxxxsjc.supabase.co;
-const SUPABASE_PUBLIC_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrZ2R3em90eml5YnBmeHh4c2pjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0ODk3MzAsImV4cCI6MjEwODA2NTczMH0.rXZXVdJ2oiV5Rbbjxb3NwNZgusU1ghmLh8ACkZoJtww;
+const SUPABASE_URL='https://akgdwzotziybpfxxxsjc.supabase.co';
+const SUPABASE_PUBLIC_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrZ2R3em90eml5YnBmeHh4c2pjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0ODk3MzAsImV4cCI6MjEwODA2NTczMH0.rXZXVdJ2oiV5Rbbjxb3NwNZgusU1ghmLh8ACkZoJtww';
 let supabase=null,user=null,previewUrl='',syncRunning=false,saveLock=false;
 const DB_NAME='rfo-offline-html-v1',STORE='records';
 function openDb(){return new Promise((ok,no)=>{const req=indexedDB.open(DB_NAME,1);req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(STORE)){const s=db.createObjectStore(STORE,{keyPath:'uuid'});s.createIndex('state','state');s.createIndex('createdAt','createdAt')}};req.onsuccess=()=>ok(req.result);req.onerror=()=>no(req.error)})}
